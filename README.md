@@ -42,7 +42,9 @@ lang_chain.py uses langchain to iterate over all of the django tasks in the SWEB
 
 If you want to save yourself some OpenAI credits the output of running this is saved in example_output/summaries.json
 
-## Usage lang_chain.py
+If you want to summarize all tasks, just remove the Django filter in the code.
+
+## Usage summarize_tasks.py
 
 In order to run this script
 To run the main script and process documents:
@@ -58,7 +60,7 @@ This data is linked from the main [SWE-bench github](https://github.com/princeto
 
 3. Run the script with:
    ```
-   python lang_chain.py
+   python summarize_tasks.py
    ```
 
 If you are successful you're output will be saved to a timestamped directory under data. data/<timestamp>/summaries.json
