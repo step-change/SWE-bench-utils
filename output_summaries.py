@@ -4,23 +4,28 @@ import typer
 
 import json
 import pandas as pd
+import os
+from dotenv import load_dotenv
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
 app = typer.Typer()
 
+load_dotenv()
+DATA_FILE_PATH = os.getenv("DATA_FILE_PATH")
+
 
 def get_earliest_and_latest_dates(df, summaries):
     """
-    Iterates over a list of summaries to find the earliest and latest created_at dates.
+    Find the earliest and latest dates among a list of summaries.
 
-    Args:
-    df (DataFrame): The DataFrame containing issue data.
-    summaries (list): A list of summary dictionaries.
+    Parameters:
+        df (pd.DataFrame): DataFrame containing the dataset.
+        summaries (list): A list of summary objects.
 
     Returns:
-    tuple: A tuple containing the earliest and latest dates.
+        tuple: A tuple containing the earliest and latest dates
     """
     dates = []
     for summary in summaries:
@@ -39,14 +44,14 @@ def get_earliest_and_latest_dates(df, summaries):
 
 def find_django_date_by_instance_id(df, instance_id):
     """
-    Searches for a given instance_id in the DataFrame and returns its created_at date.
+    Finds the creation date of a Django issue given its instance ID.
 
-    Args:
-    df (DataFrame): The DataFrame containing issue data.
-    instance_id (str): The instance ID to search for.
+    Parameters:
+        df (pd.DataFrame): DataFrame containing the dataset.
+        instance_id (str): The unique identifier for the issue.
 
     Returns:
-    str: The created_at date of the found entry, or None if not found.
+        str: The creation date of the issue, if found; otherwise, None.
     """
     entry = df[df["instance_id"] == instance_id]
 
@@ -60,6 +65,15 @@ def find_django_date_by_instance_id(df, instance_id):
 
 # Function to create and save pie chart from category counts
 def create_pie_chart(category_counts, title, label_threshold, output_filename):
+    """
+    Creates a pie chart from category counts.
+
+    Parameters:
+        category_counts (Counter): A counter object with category counts.
+        title (str): The title of the pie chart.
+        label_threshold (int): The threshold for displaying labels.
+        output_filename (str): Path to save the pie chart image.
+    """
     labels = [
         label if count >= label_threshold else ""
         for label, count in category_counts.items()
@@ -112,6 +126,12 @@ def create_pie_chart(category_counts, title, label_threshold, output_filename):
 
 
 def print_summaries(summaries):
+    """
+    Prints summaries categorized by their category type.
+
+    Parameters:
+        summaries (list): A list of summary objects.
+    """
     # Organize summaries by category
     summaries_by_category = defaultdict(list)
     for summary in summaries:
@@ -132,6 +152,17 @@ def print_summaries(summaries):
 
 
 def find_matches_in_summaries(summaries, django_fail, django_pass):
+    """
+    Finds summaries that match given Django fail and pass identifiers.
+
+    Parameters:
+        summaries (list): A list of summary objects.
+        django_fail (list): Identifiers for failed Django tasks.
+        django_pass (list): Identifiers for passed Django tasks.
+
+    Returns:
+        tuple: Two lists of matched fail and pass summaries.
+    """
     # Initialize dictionaries to hold matching summaries
     fail_summaries = []
     pass_summaries = []
@@ -153,6 +184,15 @@ def find_matches_in_summaries(summaries, django_fail, django_pass):
 
 
 def load_and_filter_devin_results(file_path):
+    """
+    Loads and filters Devin result file names for Django-related entries.
+
+    Parameters:
+        file_path (str): Path to the Devin results JSON file.
+
+    Returns:
+        tuple: Two sorted lists containing Django fail and pass file names.
+    """
     # Load the JSON data from the specified file
     with open(file_path, "r") as f:
         data = json.load(f)
@@ -181,7 +221,15 @@ def load_and_filter_devin_results(file_path):
 
 
 def load_summaries(file_path: str):
-    """Loads summaries from a JSON file."""
+    """
+    Loads summaries from a specified JSON file.
+
+    Parameters:
+        file_path (str): The file path of the JSON file containing summaries.
+
+    Returns:
+        list: A list of summaries.
+    """
     with open(file_path, "r", encoding="utf-8") as file:
         return json.load(file)
 
@@ -194,7 +242,14 @@ def print_issues_by_tag(
         None, "--filter-category", help="Filter issues by category"
     ),
 ):
-    """Prints issues that match a given tag and optionally filters them by category."""
+    """
+    Prints issues matching a specific tag and optionally filters by category.
+
+    Parameters:
+        file_path (str): Path to the JSON file containing issues summaries.
+        tag (str): The tag to filter issues by.
+        filter_category (str, optional): Category to further filter issues by.
+    """
     summaries = load_summaries(file_path)
     issues_with_tag = [
         summary for summary in summaries if tag in summary.get("tags", [])
@@ -230,6 +285,14 @@ def print_issues_by_tag(
 
 
 def print_top_terms(vectorizer, kmeans, top_n=10):
+    """
+    Prints the top terms per cluster for KMeans clustering results.
+
+    Parameters:
+        vectorizer (CountVectorizer): The vectorizer used for text data.
+        kmeans (KMeans): The KMeans clustering object.
+        top_n (int): Number of top terms to print per cluster.
+    """
     order_centroids = kmeans.cluster_centers_.argsort()[:, ::-1]
     terms = vectorizer.get_feature_names_out()
     cluster_terms = []
@@ -246,8 +309,13 @@ def print_top_terms(vectorizer, kmeans, top_n=10):
 def cluster_issues_by_tag(
     file_path: str = typer.Option(...), tag: str = typer.Option(...)
 ):
-    """Cluster issues that match a given tag and render png."""
+    """
+    Clusters issues based on their tags and saves the cluster visualization as a png.
 
+    Parameters:
+        file_path (str): Path to the JSON file containing issues summaries.
+        tag (str): The tag to cluster issues by.
+    """
     summaries = load_summaries(file_path)
     issues_with_tag = [
         summary for summary in summaries if tag in summary.get("tags", [])
@@ -335,7 +403,13 @@ def analyze_devin_info(
     file_path: str = typer.Option(...),
     n: int = typer.Option(10, help="Number of top categories and tags to display"),
 ):
+    """
+    Analyzes Devin's information, displaying top categories and tags.
 
+    Parameters:
+        file_path (str): Path to the JSON file containing issues summaries.
+        n (int): Number of top categories and tags to display.
+    """
     # Assuming the JSON file is named 'devin-results.json' and located in the current directory
     django_fail, django_pass = load_and_filter_devin_results("devin-results.json")
     # print("django_pass results: {django_pass}")
@@ -349,6 +423,7 @@ def analyze_devin_info(
     fail_category_counts, fail_tag_counts, _ = tabulate_summaries(fail_summaries)
     pass_category_counts, pass_tag_counts, _ = tabulate_summaries(pass_summaries)
 
+    # Un comment the following lines to create pie charts
     # create_pie_chart(
     #     pass_category_counts,
     #     "Django Task Pass Categories",
@@ -373,10 +448,8 @@ def analyze_devin_info(
 
     print_summaries(fail_summaries)
 
-    # TODO: Create a cli variable to specify the DATA_FILE_PATH file path
     # parquet file can be found on the SWEBench hugging face dataset page
     # https://huggingface.co/datasets/princeton-nlp/SWE-bench
-    DATA_FILE_PATH = "./test-00000-of-00001-dc7762b94638c186.parquet"
     df = pd.read_parquet(DATA_FILE_PATH)
 
     earliest_date, latest_date = get_earliest_and_latest_dates(df, pass_summaries)
@@ -413,7 +486,13 @@ def print_top(
     file_path: str = typer.Option(...),
     n: int = typer.Option(10, help="Number of top categories and tags to display"),
 ):
-    """Prints the top N categories and tags."""
+    """
+    Prints the top categories and tags from summaries.
+
+    Parameters:
+        file_path (str): Path to the JSON file containing issues summaries.
+        n (int): Number of top categories and tags to display.
+    """
     summaries = load_summaries(file_path)
     category_counts, tag_counts, _ = tabulate_summaries(summaries)
 
@@ -444,7 +523,14 @@ def piechart_top_categories(
     file_path: str = typer.Option(...),
     n: int = typer.Option(10, help="Number of top categories and tags to display"),
 ):
-    """Prints the top N categories and tags."""
+    """
+    Generates a pie chart for top categories in the summaries.
+
+    Parameters:
+        file_path (str): Path to the JSON file containing issues summaries.
+        n (int): Number of top categories to include in the pie chart.
+    """
+
     summaries = load_summaries(file_path)
     category_counts, tag_counts, _ = tabulate_summaries(summaries)
 
