@@ -1,0 +1,8 @@
+pandas
+python-dotenv
+asyncio
+scikit-learn
+matplotlib
+typer
+langchain
+langchain-openai
