@@ -150,32 +150,38 @@ def create_pie_chart(category_counts, title, label_threshold, output_filename):
     # plt.show()
 
 
-def print_summaries(summaries):
+def print_summaries_to_markdown(summaries):
     """
-    Prints summaries categorized by their category type.
+    Generates Markdown formatted text for summaries categorized by their category type,
+    including clickable GitHub URLs.
 
     Parameters:
         summaries (list): A list of summary objects.
     """
+    from collections import defaultdict
+
     # Organize summaries by category
     summaries_by_category = defaultdict(list)
     for summary in summaries:
         category = summary.get("category", "No Category")
         summaries_by_category[category].append(summary)
 
-    # Iterate through each category and print the summaries
+    markdown_output = ""
+    # Iterate through each category and generate Markdown text
     for category, summaries in summaries_by_category.items():
-        print(f"{category}:")
+        markdown_output += f"## {category}:\n"
         for summary in summaries:
             instance_id = summary.get("instance_id", "No ID")
             github_url = generate_github_url(instance_id)
             summary_text = summary.get("summary", "No Summary")
             tags = ", ".join(summary.get("tags", []))
 
-            print(f"  - Instance ID: {instance_id}")
-            print(f"  - PR Url: {github_url}")
-            print(f"    Summary: {summary_text}")
-            print(f"    Tags: {tags}\n")
+            # Format the GitHub URL as a clickable link in Markdown
+            markdown_output += f"- **Instance ID:** {instance_id}\n"
+            markdown_output += f"- **PR Url:** [{github_url}]({github_url})\n"
+            markdown_output += f"  - **Summary:** {summary_text}\n"
+            markdown_output += f"  - **Tags:** {tags}\n\n"
+    return markdown_output
 
 
 def find_matches_in_summaries(summaries, django_fail, django_pass):
@@ -441,6 +447,10 @@ def analyze_devin_info(
     django_fail, django_pass = load_and_filter_devin_results(
         "./example_output/devin-results.json"
     )
+    # parquet file can be found on the SWEBench hugging face dataset page
+    # https://huggingface.co/datasets/princeton-nlp/SWE-bench
+    df = pd.read_parquet(DATA_FILE_PATH)
+
     # print("django_pass results: {django_pass}")
     # Now we need to search the summaries for these django issues and print information about them.
 
@@ -466,48 +476,51 @@ def analyze_devin_info(
     #     "devin_fail_pie_chart.png",
     # )
 
-    print(f"Fail Summaries Analysis:")
-    print(f"Categories:")
+    markdown_output = "## Devin's Information Analysis\n\n"
+
+    # Fail Summaries Analysis
+    markdown_output += "### Summaries For Failed Tasks \n"
+    markdown_output += "**Top Categories:**\n"
     for category, count in fail_category_counts.most_common(n):
-        print(f"{category}: {count}")
+        markdown_output += f"- {category}: {count}\n"
 
-    print(f"\nTop {n} Tags:")
+    markdown_output += f"\n**Top {n} Tags:**\n"
     for tag, count in fail_tag_counts.most_common(n):
-        print(f"{tag}: {count}")
+        markdown_output += f"- {tag}: {count}\n\n"
 
-    print_summaries(fail_summaries)
+    markdown_output += print_summaries_to_markdown(fail_summaries)
 
-    # parquet file can be found on the SWEBench hugging face dataset page
-    # https://huggingface.co/datasets/princeton-nlp/SWE-bench
-    df = pd.read_parquet(DATA_FILE_PATH)
+    earliest_date_pass, latest_date_pass = get_earliest_and_latest_dates(
+        df, fail_summaries
+    )
+    markdown_output += "### Date Range for Fail Tasks\n"
+    if earliest_date_pass and latest_date_pass:
+        markdown_output += f"- Earliest date: {earliest_date_pass}\n"
+        markdown_output += f"- Latest date: {latest_date_pass}\n"
+    else:
+        markdown_output += "- No dates found.\n\n"
+
+    # Pass Summaries Analysis
+    markdown_output += "### Summaries For Passed Tasks\n"
+    markdown_output += "**Top Categories:**\n"
+    for category, count in pass_category_counts.most_common(n):
+        markdown_output += f"- {category}: {count}\n"
+
+    markdown_output += f"\n**Top {n} Tags:**\n"
+    for tag, count in pass_tag_counts.most_common(n):
+        markdown_output += f"- {tag}: {count}\n\n"
+
+    # Assuming `print_summaries_to_markdown` function is adapted to return Markdown text
+    markdown_output += print_summaries_to_markdown(pass_summaries)
 
     earliest_date, latest_date = get_earliest_and_latest_dates(df, pass_summaries)
-    print(f"Django pass summaries date range")
+    markdown_output += "### Date Range for Pass Tasks\n"
     if earliest_date and latest_date:
-        print(f"Earliest date: {earliest_date}")
-        print(f"Latest date: {latest_date}")
+        markdown_output += f"- Earliest date: {earliest_date}\n"
+        markdown_output += f"- Latest date: {latest_date}\n"
     else:
-        print("No dates found.")
-
-    earliest_date, latest_date = get_earliest_and_latest_dates(df, fail_summaries)
-    print(f"Django fail summaries date range")
-    if earliest_date and latest_date:
-        print(f"Earliest date: {earliest_date}")
-        print(f"Latest date: {latest_date}")
-    else:
-        print("No dates found.")
-
-    print("")
-    print(f"Pass Summaries Analysis:")
-    print(f"Categories:")
-    for category, count in pass_category_counts.most_common(n):
-        print(f"{category}: {count}")
-
-    print(f"\nTop {n} Tags:")
-    for tag, count in pass_tag_counts.most_common(n):
-        print(f"{tag}: {count}")
-
-    print_summaries(pass_summaries)
+        markdown_output += "- No dates found.\n\n"
+    print(markdown_output)
 
 
 @app.command()
