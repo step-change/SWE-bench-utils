@@ -243,13 +243,43 @@ def load_and_filter_devin_results(file_path):
 
     django_fail_count = len(django_fail)
     django_pass_count = len(django_pass)
-    # Print the total counts and the django filenames
-    print(f"Total Fail:  {fail_total}")
-    print(f"Total Pass: {pass_total}")
-    print(f"Django Fail Count: {django_fail_count}")
-    print(f"Django Pass Count: {django_pass_count}")
-    print("\nDjango Fail:")
+    # Calculating percentages
+    # Total tasks
+    total_tasks = fail_total + pass_total
 
+    # Calculating percentages
+    pass_rate = (pass_total / total_tasks * 100) if total_tasks else 0
+    django_task_total = django_fail_count + django_pass_count
+
+    # Calculating percentages dynamically
+    django_pass_percentage_of_django_tasks = (
+        (django_pass_count / django_task_total * 100) if django_task_total else 0
+    )
+    django_pass_percentage_of_all_tasks = (
+        (django_pass_count / total_tasks * 100) if total_tasks else 0
+    )
+
+    # Markdown output
+    markdown_output = "## Analysis Summary\n\n"
+    markdown_output += f"- **Total Tasks:** {total_tasks}\n"
+    markdown_output += f"  - **Total Fail:** {fail_total}\n"
+    markdown_output += f"  - **Total Pass:** {pass_total}\n"
+    markdown_output += f"- **Pass Rate:** {pass_rate:.2f}% of all tasks\n\n"
+
+    markdown_output += "### Django Task Analysis\n"
+    markdown_output += f"- **Total Django Tasks:** {django_task_total}\n"
+    markdown_output += f"  - **Django Fail Count:** {django_fail_count}\n"
+    markdown_output += f"  - **Django Pass Count:** {django_pass_count}\n"
+    markdown_output += (
+        "   - **Django Pass Percentage of Django Tasks:** {:.2f}%\n".format(
+            django_pass_percentage_of_django_tasks
+        )
+    )
+    markdown_output += "   - **Django Pass Percentage of All Tasks:** {:.2f}%\n".format(
+        django_pass_percentage_of_all_tasks
+    )
+
+    print(markdown_output)
     return django_fail, django_pass
 
 
