@@ -16,6 +16,31 @@ load_dotenv()
 DATA_FILE_PATH = os.getenv("DATA_FILE_PATH")
 
 
+def generate_github_url(instance_id):
+    """
+    Generates a GitHub pull request URL from a given instance id.
+
+    The instance id should be in the format of 'repository__repository-issue_number',
+    where 'repository' is the GitHub repository name and 'issue_number' is the pull
+    request or issue number. For example, 'django__django-11727'.
+
+    Parameters:
+    - instance_id (str): The instance id in the specified format.
+
+    Returns:
+    - str: The GitHub pull request URL constructed from the instance id.
+    """
+    # Split the instance id into parts based on '__' and then '-'
+    parts = instance_id.split("__")
+    repo_part = parts[0]  # Get the repository part
+    issue_part = parts[1].split("-")[-1]  # Get the issue/pull request number
+
+    # Construct the GitHub URL
+    github_url = f"https://github.com/{repo_part}/{repo_part}/pull/{issue_part}"
+
+    return github_url
+
+
 def get_earliest_and_latest_dates(df, summaries):
     """
     Find the earliest and latest dates among a list of summaries.
@@ -143,10 +168,12 @@ def print_summaries(summaries):
         print(f"{category}:")
         for summary in summaries:
             instance_id = summary.get("instance_id", "No ID")
+            github_url = generate_github_url(instance_id)
             summary_text = summary.get("summary", "No Summary")
             tags = ", ".join(summary.get("tags", []))
 
             print(f"  - Instance ID: {instance_id}")
+            print(f"  - PR Url: {github_url}")
             print(f"    Summary: {summary_text}")
             print(f"    Tags: {tags}\n")
 
@@ -411,7 +438,9 @@ def analyze_devin_info(
         n (int): Number of top categories and tags to display.
     """
     # Assuming the JSON file is named 'devin-results.json' and located in the current directory
-    django_fail, django_pass = load_and_filter_devin_results("devin-results.json")
+    django_fail, django_pass = load_and_filter_devin_results(
+        "./example_output/devin-results.json"
+    )
     # print("django_pass results: {django_pass}")
     # Now we need to search the summaries for these django issues and print information about them.
 
@@ -478,7 +507,7 @@ def analyze_devin_info(
     for tag, count in pass_tag_counts.most_common(n):
         print(f"{tag}: {count}")
 
-    # print_summaries(pass_summaries)
+    print_summaries(pass_summaries)
 
 
 @app.command()
