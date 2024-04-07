@@ -91,12 +91,14 @@ def find_django_date_by_instance_id(df, instance_id):
 # Function to create and save pie chart from category counts
 def create_pie_chart(category_counts, title, label_threshold, output_filename):
     """
-    Creates a pie chart from category counts.
+    Creates a pie chart from category counts. Slices representing less than 1% will not have their
+    percentage rendered.
 
     Parameters:
         category_counts (Counter): A counter object with category counts.
         title (str): The title of the pie chart.
-        label_threshold (int): The threshold for displaying labels.
+        label_threshold (int): The threshold for displaying labels. This is used to determine
+                               whether a slice's label is displayed based on its count.
         output_filename (str): Path to save the pie chart image.
     """
     labels = [
@@ -107,16 +109,16 @@ def create_pie_chart(category_counts, title, label_threshold, output_filename):
 
     # Define your colors here, one for each category
     colors = [
-        "#ff9999",
-        "#66b3ff",
-        "#99ff99",
-        "#ffcc99",
-        "#c2c2f0",
-        "#ffb3e6",
-        "#c4e17f",
-        "#76d7c4",
-        "#fffcc4",
-        "#ffeb3b",
+        "#1cd463",  # Original green
+        "#4C9A2A",  # Olive green
+        "#76B947",  # Lime green
+        "#007F5F",  # Deep sea green
+        "#2E8B57",  # Sea green
+        "#6B8E23",  # Olive drab
+        "#98FB98",  # Pale green
+        "#00FF7F",  # Spring green
+        "#7CFC00",  # Lawn green
+        "#3CB371",  # Medium sea green
     ]
 
     # Ensure that there are enough colors to match the categories
@@ -130,16 +132,12 @@ def create_pie_chart(category_counts, title, label_threshold, output_filename):
     wedges, texts, autotexts = ax.pie(
         sizes,
         labels=labels,
-        autopct="%1.1f%%",
+        autopct=lambda p: "" if p < 1 else f"{p:.1f}%",
         startangle=90,
         colors=colors[
             : len(category_counts)
         ],  # Slice the colors list to match the number of categories
     )
-
-    for autotext in autotexts:
-        if autotext.get_text() == "0.0%":
-            autotext.set_visible(False)
 
     ax.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
     plt.title(title)
@@ -150,13 +148,14 @@ def create_pie_chart(category_counts, title, label_threshold, output_filename):
     # plt.show()
 
 
-def print_summaries_to_markdown(summaries):
+def print_summaries_to_markdown(summaries, devin_diff_url_base):
     """
     Generates Markdown formatted text for summaries categorized by their category type,
-    including clickable GitHub URLs.
+    including clickable GitHub URLs and Devin diff URLs.
 
     Parameters:
         summaries (list): A list of summary objects.
+        devin_diff_url_base (str): The base URL for Devin diffs.
     """
     from collections import defaultdict
 
@@ -176,11 +175,18 @@ def print_summaries_to_markdown(summaries):
             summary_text = summary.get("summary", "No Summary")
             tags = ", ".join(summary.get("tags", []))
 
-            # Format the GitHub URL as a clickable link in Markdown
+            # Generate the Devin diff URL for each summary
+            devin_diff_url = f"{devin_diff_url_base}{instance_id}-diff.txt"
+
+            # Format the GitHub URL and Devin diff URL as clickable links in Markdown
             markdown_output += f"- **Instance ID:** {instance_id}\n"
             markdown_output += f"- **PR Url:** [{github_url}]({github_url})\n"
+            markdown_output += (
+                f"- **Devin Diff:** [{devin_diff_url}]({devin_diff_url})\n"
+            )
             markdown_output += f"  - **Summary:** {summary_text}\n"
             markdown_output += f"  - **Tags:** {tags}\n\n"
+
     return markdown_output
 
 
@@ -493,18 +499,18 @@ def analyze_devin_info(
     pass_category_counts, pass_tag_counts, _ = tabulate_summaries(pass_summaries)
 
     # Un comment the following lines to create pie charts
-    # create_pie_chart(
-    #     pass_category_counts,
-    #     "Django Task Pass Categories",
-    #     4,
-    #     "devin_pass_pie_chart.png",
-    # )
-    # create_pie_chart(
-    #     fail_category_counts,
-    #     "Django Task Fail Categories",
-    #     4,
-    #     "devin_fail_pie_chart.png",
-    # )
+    create_pie_chart(
+        pass_category_counts,
+        "Django Task Pass Categories",
+        4,
+        "devin_pass_pie_chart.png",
+    )
+    create_pie_chart(
+        fail_category_counts,
+        "Django Task Fail Categories",
+        4,
+        "devin_fail_pie_chart.png",
+    )
 
     markdown_output = "## Devin's Information Analysis\n\n"
 
@@ -518,7 +524,8 @@ def analyze_devin_info(
     for tag, count in fail_tag_counts.most_common(n):
         markdown_output += f"- {tag}: {count}\n\n"
 
-    markdown_output += print_summaries_to_markdown(fail_summaries)
+    devin_fail_url_base = "https://github.com/CognitionAI/devin-swebench-results/tree/main/output_diffs/fail/"
+    markdown_output += print_summaries_to_markdown(fail_summaries, devin_fail_url_base)
 
     earliest_date_pass, latest_date_pass = get_earliest_and_latest_dates(
         df, fail_summaries
@@ -541,7 +548,8 @@ def analyze_devin_info(
         markdown_output += f"- {tag}: {count}\n\n"
 
     # Assuming `print_summaries_to_markdown` function is adapted to return Markdown text
-    markdown_output += print_summaries_to_markdown(pass_summaries)
+    devin_pass_url_base = "https://github.com/CognitionAI/devin-swebench-results/blob/main/output_diffs/pass/"
+    markdown_output += print_summaries_to_markdown(pass_summaries, devin_pass_url_base)
 
     earliest_date, latest_date = get_earliest_and_latest_dates(df, pass_summaries)
     markdown_output += "### Date Range for Pass Tasks\n"
