@@ -592,13 +592,7 @@ def analyze_devin_info(
     devin_results_json_path = "./example_output/devin-results.json"
     # Assuming the JSON file is named 'devin-results.json' and located in the current directory
     django_fail, django_pass = load_and_filter_devin_results(devin_results_json_path)
-    # Build map that counts the lines / files changed for devin results.
 
-    diff_base_directory = "./example_output/devin_output_diffs/"
-    results = analyze_diffs(devin_results_json_path, diff_base_directory)
-    diff_analysis = summarize_diff_analysis_results_in_markdown(results)
-    print(diff_analysis)
-    return
     # parquet file can be found on the SWEBench hugging face dataset page
     # https://huggingface.co/datasets/princeton-nlp/SWE-bench
     df = pd.read_parquet(DATA_FILE_PATH)
@@ -629,7 +623,11 @@ def analyze_devin_info(
     )
 
     markdown_output = "## Devin's Information Analysis\n\n"
-
+    # Build map that counts the lines / files changed for devin results.
+    diff_base_directory = "./example_output/devin_output_diffs/"
+    results = analyze_diffs(devin_results_json_path, diff_base_directory)
+    diff_analysis = summarize_diff_analysis_results_in_markdown(results)
+    markdown_output += diff_analysis
     # Fail Summaries Analysis
     markdown_output += "### Summaries For Failed Tasks \n"
     markdown_output += "**Top Categories:**\n"
